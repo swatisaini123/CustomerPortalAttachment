@@ -1,0 +1,402 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://live.zwidgets.com/js-sdk/1.1/ZohoEmbededAppSDK.min.js"></script>
+    <title>File Upload with Progress and Zoho CRM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+        }
+
+        .upload-container {
+            text-align: center;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 646px;
+            width: 100%;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .drop-zone {
+            margin-top: 10%;
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            padding: 30px;
+            cursor: pointer;
+            background-color: #f1faff;
+            transition: background-color 0.3s ease;
+            position: relative;
+        }
+
+        .drop-zone:hover {
+            background-color: #e0f0ff;
+        }
+
+        .drop-zone p {
+            margin: 0;
+            color: #007bff;
+            font-size: 16px;
+        }
+
+        .drop-zone #select-files {
+            color: #007bff;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .drop-zone i {
+            font-size: 50px;
+            color: #007bff;
+            margin-bottom: 10px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .file-list .remove-button {
+            cursor: pointer;
+            color: #ff0000;
+            font-size: 18px;
+        }
+
+        .file-list p {
+            margin: 10px 0;
+            color: #333;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .file-list p i {
+            margin-right: 10px;
+            color: #007bff;
+            font-size: 23px;
+        }
+
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 25px;
+            overflow: hidden;
+            height: 25px;
+            position: relative;
+        }
+
+        .picklist-container {
+            margin-top: 20px;
+        }
+/*.remove-button{
+    cursor: pointer;
+    color: #ff0000;
+    font-size: 17px;
+    margin-left: 58%;
+}*/
+        .picklist-container select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            font-size: 16px;
+            color: #333;
+            background-color: #f1faff;
+            transition: border-color 0.3s ease;
+        }
+
+        .picklist-container select:focus {
+            border-color: #0056b3;
+            outline: none;
+        }
+        #upload-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background-color: #007bff;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #upload-button:disabled {
+            background-color: #c0c0c0;
+            cursor: not-allowed;
+        }
+            /* Popup Message Styles */
+            .popup-message {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 15px;
+                border-radius: 8px;
+                color: #fff;
+                font-size: 16px;
+                z-index: 1000;
+                display: none;
+            }
+    
+            .popup-message.success {
+                background-color: #28a745;
+            }
+    
+            .popup-message.error {
+                background-color: #dc3545;
+            }
+            .progress-container {
+                width: 100%;
+                background-color: #e0e0e0;
+                border-radius: 25px;
+                overflow: hidden;
+                height: 25px;
+                margin-top: 20px;
+                display: none; /* Hidden initially */
+            }
+            
+            .progress-bar {
+                height: 100%;
+                width: 0;
+                background-color: #007bff;
+                transition: width 0.4s ease;
+            }
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <div class="picklist-container">
+            <select id="deal-picklist">
+                <option value="">Select a Case</option>
+            </select>
+        </div>
+        <div id="drop-zone" class="drop-zone">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Drag & Drop files here or <span id="select-files">Select Files</span></p>
+            <input type="file" id="file-input" multiple hidden>
+        </div>
+        <div id="file-list" class="file-list"></div>
+        <!-- Progress Container -->
+<div id="progress-container" class="progress-container">
+    <div id="progress-bar" class="progress-bar"></div>
+</div>
+        <button id="upload-button" disabled>Upload</button>
+    </div>
+    <div id="popup-message" class="popup-message"></div>
+    <script src="https://js.zohostatic.com/ZohoCRM/API/8.0/zoho-crm-api.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+            const fileList = document.getElementById('file-list');
+            const selectFilesText = document.getElementById('select-files');
+            const uploadButton = document.getElementById('upload-button');
+            const dealPicklist = document.getElementById('deal-picklist');
+            const popupMessage = document.getElementById('popup-message');
+            let filesArray = [];
+            selectFilesText.addEventListener('click', () => {
+                fileInput.click();
+            });
+    
+            fileInput.addEventListener('change', (event) => {
+                const selectedFiles = Array.from(event.target.files);
+                // Add new files to the array, avoiding duplicates
+                selectedFiles.forEach(file => {
+                    if (!filesArray.some(existingFile => existingFile.name === file.name)) {
+                        filesArray.push(file);
+                    }
+                });
+                handleFiles(event.target.files);
+                fileInput.value = '';
+            });
+    
+            dropZone.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                dropZone.classList.add('hover');
+            });
+    
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('hover');
+            });
+    
+            dropZone.addEventListener('drop', (event) => {
+                event.preventDefault();
+                dropZone.classList.remove('hover');
+                const files = event.dataTransfer.files;
+                handleFiles(files);
+            });
+    
+            function handleFiles(files) {
+                fileList.innerHTML = '';
+                filesArray = Array.from(files);
+                filesArray.forEach(file => {
+                    const p = document.createElement('p');
+                    const icon = document.createElement('i');
+                    const fileExtension = getFileExtension(file.name);
+                    const removeButton = document.createElement('span');
+                    icon.className = getFileIconClass(fileExtension);
+                    p.appendChild(icon);
+                    p.appendChild(document.createTextNode(file.name));
+                    removeButton.className = 'remove-button';
+                    removeButton.innerHTML = '&times;';
+                    removeButton.addEventListener('click', () => {
+                        removeFile(file.name);
+                    });
+
+                    p.appendChild(removeButton);
+                    fileList.appendChild(p);
+                });
+    
+                uploadButton.disabled = filesArray.length === 0;
+            }
+            uploadButton.addEventListener('click', () => {
+                uploadFiles();
+            });
+            function getFileExtension(fileName) {
+                return fileName.split('.').pop().toLowerCase();
+            }
+            function removeFile(fileName) {
+                filesArray = filesArray.filter(file => file.name !== fileName);
+                handleFiles(filesArray);
+            }
+            function getFileIconClass(extension) {
+                switch (extension) {
+                    case 'pdf': return 'fas fa-file-pdf text-danger';
+                    case 'doc':
+                    case 'docx': return 'fas fa-file-word text-primary';
+                    case 'xls':
+                    case 'xlsx': return 'fas fa-file-excel text-success';
+                    case 'ppt':
+                    case 'pptx': return 'fas fa-file-powerpoint text-warning';
+                    case 'jpg':
+                    case 'jpeg':
+                    case 'png':
+                    case 'gif': return 'fas fa-file-image text-info';
+                    case 'txt': return 'fas fa-file-alt text-secondary';
+                    case 'zip':
+                    case 'rar': return 'fas fa-file-archive text-muted';
+                    case 'mp4':
+                    case 'mov':
+                    case 'avi': return 'fas fa-file-video text-danger';
+                    case 'mp3':
+                    case 'wav': return 'fas fa-file-audio text-warning';
+                    default: return 'fas fa-file text-dark';
+                }
+            }
+    
+            function uploadFiles() {
+                const selectedDealId = dealPicklist.value;
+            
+                if (!selectedDealId) {
+                    showPopupMessage('Please select a Record.', 'error');
+                    return;
+                }
+            
+                const formData = new FormData();
+                filesArray.forEach(file => {
+                    formData.append('files[]', file); // Append each file with the key 'files[]'
+                });
+                formData.append('dealId', selectedDealId);
+                document.getElementById('progress-container').style.display = 'block';
+                $.ajax({
+                    url: 'http://localhost:5000/uploading_Attachments',
+                    method: 'POST',
+                    data: formData,
+                    contentType: false, // Important for FormData
+                    processData: false, // Important for FormData
+                    xhr: function() {
+                        const xhr = new XMLHttpRequest();
+                        xhr.upload.addEventListener('progress', function(event) {
+                            if (event.lengthComputable) {
+                                const percentComplete = (event.loaded / event.total) * 100;
+                                document.getElementById('progress-bar').style.width = percentComplete + '%';
+                            }
+                        });
+                        return xhr;
+                    },
+                    success: function(response) {
+                        showPopupMessage('Files uploaded successfully!', 'success');
+                        resetFileInput();
+                        document.getElementById('progress-container').style.display = 'none';
+                    },
+                    error: function(xhr, status, error) {
+                        showPopupMessage('Failed to upload files. Please try again.', 'error');
+                        console.error('Upload error:', error);
+                        document.getElementById('progress-container').style.display = 'none';
+                    }
+                });
+            }
+            function showPopupMessage(message, type) {
+                popupMessage.textContent = message;
+                popupMessage.className = `popup-message ${type}`;
+                popupMessage.style.display = 'block';
+                setTimeout(() => {
+                    popupMessage.style.display = 'none';
+                }, 5000);
+            }
+            function resetFileInput() {
+                // Clear the file input and the file list
+                document.getElementById('file-input').value = '';
+                fileList.innerHTML = '';
+                filesArray = [];
+                uploadButton.disabled = true; // Disable upload button
+            }
+            function populateDealPicklist(deals) {
+                deals.forEach(deal => {
+                    const option = document.createElement('option');
+                    option.value = deal.id;
+                    option.textContent = deal.name;
+                    dealPicklist.appendChild(option);
+                });
+            }
+    
+            ZOHO.embeddedApp.on("PageLoad", function (data) {
+                ZOHO.CRM.API.getAllRecords({ Entity: "Deals" }).then(function(response) {
+                    if (response && response.data) {
+                        
+                        const dealOptions = response.data.map(deal => ({
+                            id: deal.id,
+                            name: deal.Description_of_Claims +" / " + deal.Deal_Name
+                        }));
+                        console.log('dealOptions', JSON.stringify(dealOptions));
+                        populateDealPicklist(dealOptions);
+                    } else {
+                        console.error('Error fetching deals:', response);
+                    }
+                }).catch(function(error) {
+                    console.error('Error fetching deals:', error);
+                });
+            });
+    
+            ZOHO.embeddedApp.init();
+        });
+    </script>
+    </body>
+    </html>
+
+
