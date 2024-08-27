@@ -6,7 +6,7 @@ const FormData = require('form-data'); // Import form-data module
 const fs = require('fs');
 const path = require('path');
 const app = express();
-const port = 5000;
+const port = 3003;
 
 // Configure multer for file upload handling
 const storage = multer.memoryStorage(); // Store files in memory
